@@ -12,18 +12,18 @@ CHUNK = 1024  # 每次读取的音频数据块大小
 output_filename = f"recording.pcm"
 output_wav_filename = f"recording.wav" 
 
-# 初始化pyaudio
-audio = pyaudio.PyAudio()
-
-# 打开音频流
-stream = audio.open(format=FORMAT, channels=CHANNELS,
-                   rate=RATE, input=True,
-                   frames_per_buffer=CHUNK)
 
 # print(f"开始录音... 保存到文件: {output_filename}")
 frames = []
 
 def microphone_data():
+    # 初始化pyaudio
+    audio = pyaudio.PyAudio()
+
+    # 打开音频流
+    stream = audio.open(format=FORMAT, channels=CHANNELS,
+                       rate=RATE, input=True,
+                       frames_per_buffer=CHUNK)
     try:
         # 直接写入PCM文件
         with open(output_filename, 'wb') as pcm_file:
@@ -54,6 +54,8 @@ def microphone_data():
         wave_file.setframerate(RATE)
         wave_file.writeframes(b''.join(frames))
 if __name__ == "__main__":
+    for _ in microphone_data():
+        pass
     for _ in microphone_data():
         pass
 

@@ -14,6 +14,7 @@ from aliyunsdkcore.request import CommonRequest
 from read_microphone import microphone_data
 from pynput import keyboard
 from pynput.keyboard import Key, Listener  # pip install pynput==1.7.6
+import pyautogui
 
 URL="wss://nls-gateway-cn-shanghai.aliyuncs.com/ws/v1"
 APPKEY=os.getenv('ALIYUN_APPKEY')
@@ -71,6 +72,7 @@ class TestSt:
 
    
     def clear(self):
+        self.times = [int(time.time())]
         self.sentences = []
 
     def test_on_sentence_begin(self, message, *args):
@@ -80,7 +82,13 @@ class TestSt:
     def test_on_sentence_end(self, message, *args):
         message = json.loads(message)
         self.sentences.append(message["payload"]["result"])
-        # pyperclip.copy(self.sentences[-1])
+        self.times.append(int(time.time()))
+        pyperclip.copy(self.sentences[-1])
+        # 模拟按下 Ctrl+V（Windows/Linux）或 Command+V（Mac）
+        if pyautogui.platform == "darwin":  # macOS
+            pyautogui.hotkey("command", "v")
+        else:  # Windows/Linux
+            pyautogui.hotkey("ctrl", "v")
         print(f"sentence_end {self.sentences}")
         # print("test_on_sentence_end:{}".format(message))
 
@@ -120,19 +128,29 @@ class TestSt:
         enable_intermediate_result=True,
         enable_punctuation_prediction=True,
         enable_inverse_text_normalization=True)
-
+        self.stop = False
+        def on_press(key):
+            if key == keyboard.Key.esc:
+                print("ESC 键被按下")
+                self.stop = True
+                self.clear()
+        listener = Listener(on_press=on_press)
+        listener.start()
         for i in self.__slices:
             self.sr.send_audio(bytes(i))
             time.sleep(0.01)
             # 捕获一个退出的信号，免的一直在数据浪费计算资源
             # 要么监控按键，要么一段时间没新sentence自动退出
+            if (int(time.time())-self.times[-1])>=10:
+                self.stop = True
+            if self.stop:
+                break
             
-
+        print("audio session stop")
         self.sr.ctrl(ex={"test":"tttt"})
         time.sleep(1)
 
         r = self.sr.stop()
-        print("FIANLLY {}: sr stopped:{}".format(self.__id, r))
         time.sleep(1)
 
 def multiruntest():
